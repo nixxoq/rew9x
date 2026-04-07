@@ -42,7 +42,8 @@ namespace Reddit98Client
         private Panel drawerHeaderPanel;
         private Label drawerHeaderLabel;
         private Panel drawerListPanel;
-        private Button drawerToggleButton;
+        private Button drawerOpenButton;
+        private Button drawerCloseButton;
         private Panel topNavButtonsPanel;
         private Panel searchHostPanel;
         private ComboBox searchComboBox;
@@ -64,7 +65,6 @@ namespace Reddit98Client
         private TabPage postTab;
         private TabPage commentsTab;
 
-        private Label modeLabel;
         private StatusFooterControl statusFooter;
         private System.Windows.Forms.Timer scrollPollTimer;
 
@@ -103,7 +103,6 @@ namespace Reddit98Client
         private bool uiBuilt = false;
         private bool updatingSearchItems = false;
         private bool subscriptionsLoading = false;
-        private bool drawerOpen = false;
 
         private string lastFeedViewportKey = "";
         private string lastCommentViewportKey = "";
@@ -228,33 +227,11 @@ namespace Reddit98Client
             new EventHandler(
                 TopBarPanel_Resize);
 
-            drawerToggleButton =
-            new Button();
-
-            drawerToggleButton.Text =
-            "Topics";
-
-            drawerToggleButton.Width =
-            64;
-
-            drawerToggleButton.Height =
-            30;
-
-            drawerToggleButton.Left =
-            8;
-
-            drawerToggleButton.Top =
-            12;
-
-            drawerToggleButton.Click +=
-            new EventHandler(
-                DrawerToggleButton_Click);
-
             topNavButtonsPanel =
             new Panel();
 
             topNavButtonsPanel.Left =
-            80;
+            12;
 
             topNavButtonsPanel.Top =
             12;
@@ -337,29 +314,11 @@ namespace Reddit98Client
             searchHostPanel.Controls.Add(
                 searchGoButton);
 
-            modeLabel =
-            new Label();
-
-            modeLabel.Top =
-            18;
-
-            modeLabel.Height =
-            18;
-
-            modeLabel.TextAlign =
-            ContentAlignment.MiddleRight;
-
-            topBarPanel.Controls.Add(
-                drawerToggleButton);
-
             topBarPanel.Controls.Add(
                 topNavButtonsPanel);
 
             topBarPanel.Controls.Add(
                 searchHostPanel);
-
-            topBarPanel.Controls.Add(
-                modeLabel);
 
             statusFooter =
             new StatusFooterControl();
@@ -424,12 +383,12 @@ namespace Reddit98Client
             feedHostPanel.Dock =
             DockStyle.Fill;
 
+            feedHostPanel.Resize +=
+            new EventHandler(
+                FeedHostPanel_Resize);
+
             drawerPanel =
             new Panel();
-
-            drawerPanel.Dock =
-            DockStyle.Left;
-
             drawerPanel.Width =
             220;
 
@@ -440,6 +399,22 @@ namespace Reddit98Client
             BorderStyle.FixedSingle;
 
             BuildDrawerPanel();
+
+            drawerOpenButton =
+            new Button();
+
+            drawerOpenButton.Text =
+            ">";
+
+            drawerOpenButton.Width =
+            18;
+
+            drawerOpenButton.Height =
+            60;
+
+            drawerOpenButton.Click +=
+            new EventHandler(
+                DrawerOpenButton_Click);
 
             feedPanel =
             new FlowLayoutPanel();
@@ -469,6 +444,9 @@ namespace Reddit98Client
 
             feedHostPanel.Controls.Add(
                 drawerPanel);
+
+            feedHostPanel.Controls.Add(
+                drawerOpenButton);
 
             split.Panel1.Controls.Add(
                 feedHostPanel);
@@ -661,6 +639,7 @@ namespace Reddit98Client
             RefreshDrawerContents();
             RefreshSearchSuggestions("");
             UpdateTopBarLayout();
+            UpdateDrawerLayout();
             UpdatePostLayoutMetrics();
             Panels_LayoutChanged(
                 this,
@@ -772,7 +751,26 @@ namespace Reddit98Client
             7;
 
             drawerHeaderLabel.Width =
-            180;
+            150;
+
+            drawerCloseButton =
+            new Button();
+
+            drawerCloseButton.Text =
+            "<";
+
+            drawerCloseButton.Width =
+            24;
+
+            drawerCloseButton.Height =
+            20;
+
+            drawerCloseButton.Top =
+            4;
+
+            drawerCloseButton.Click +=
+            new EventHandler(
+                DrawerCloseButton_Click);
 
             drawerListPanel =
             new Panel();
@@ -785,6 +783,9 @@ namespace Reddit98Client
 
             drawerHeaderPanel.Controls.Add(
                 drawerHeaderLabel);
+
+            drawerHeaderPanel.Controls.Add(
+                drawerCloseButton);
 
             drawerPanel.Controls.Add(
                 drawerListPanel);
@@ -837,39 +838,48 @@ namespace Reddit98Client
                 return;
 
             int searchWidth =
-            360;
+            320;
 
             if (topBarPanel.ClientSize.Width <
                 860)
                 searchWidth = 280;
 
+            int searchRightMargin =
+            12;
+
+            int searchLeft =
+            topBarPanel.ClientSize.Width -
+            searchWidth -
+            searchRightMargin;
+
+            int minSearchLeft =
+            topNavButtonsPanel.Right + 12;
+
+            if (searchLeft < minSearchLeft)
+            {
+                searchLeft =
+                minSearchLeft;
+
+                searchWidth =
+                topBarPanel.ClientSize.Width -
+                searchRightMargin -
+                searchLeft;
+            }
+
+            if (searchWidth < 180)
+                searchWidth = 180;
+
             searchHostPanel.Width =
             searchWidth;
 
             searchHostPanel.Left =
-            (topBarPanel.ClientSize.Width -
-             searchHostPanel.Width) / 2;
-
-            if (searchHostPanel.Left < 440)
-                searchHostPanel.Left = 440;
+            searchLeft;
 
             searchComboBox.Width =
             searchHostPanel.ClientSize.Width - 60;
 
             searchGoButton.Left =
             searchComboBox.Right + 4;
-
-            modeLabel.Width =
-            220;
-
-            modeLabel.Left =
-            topBarPanel.ClientSize.Width -
-            modeLabel.Width - 12;
-
-            if (modeLabel.Left <
-                searchHostPanel.Right + 8)
-                modeLabel.Left =
-                searchHostPanel.Right + 8;
 
             newPostButton.Left =
             (newPostPanel.ClientSize.Width -
@@ -879,21 +889,63 @@ namespace Reddit98Client
                 newPostButton.Left = 8;
         }
 
-        private void DrawerToggleButton_Click(
+        private void FeedHostPanel_Resize(
+            object sender,
+            EventArgs e)
+        {
+            UpdateDrawerLayout();
+        }
+
+        private void UpdateDrawerLayout()
+        {
+            if (feedHostPanel == null ||
+                drawerPanel == null ||
+                drawerOpenButton == null)
+                return;
+
+            drawerPanel.Left = 0;
+            drawerPanel.Top = 0;
+            drawerPanel.Height =
+            feedHostPanel.ClientSize.Height;
+
+            if (drawerCloseButton != null)
+                drawerCloseButton.Left =
+                drawerPanel.ClientSize.Width -
+                drawerCloseButton.Width - 4;
+
+            drawerOpenButton.Left = 0;
+            drawerOpenButton.Top =
+            (feedHostPanel.ClientSize.Height -
+             drawerOpenButton.Height) / 2;
+
+            if (drawerOpenButton.Top < 8)
+                drawerOpenButton.Top = 8;
+        }
+
+        private void DrawerOpenButton_Click(
             object sender,
             EventArgs e)
         {
             SetDrawerOpen(
-                !drawerOpen);
+                true);
+        }
+
+        private void DrawerCloseButton_Click(
+            object sender,
+            EventArgs e)
+        {
+            SetDrawerOpen(
+                false);
         }
 
         private void SetDrawerOpen(
             bool open)
         {
-            drawerOpen = open;
-
             if (drawerPanel != null)
                 drawerPanel.Visible = open;
+
+            if (drawerOpenButton != null)
+                drawerOpenButton.Visible = !open;
 
             if (open)
                 SetStatusText(
@@ -1646,21 +1698,21 @@ namespace Reddit98Client
                 if (!string.IsNullOrEmpty(
                     currentUsername))
                 {
-                    modeLabel.Text =
-                    "Account: u/" +
-                    currentUsername;
+                    statusFooter.SetMode(
+                        "Account: u/" +
+                        currentUsername);
                 }
                 else
                 {
-                    modeLabel.Text =
-                    "Account: signed in";
+                    statusFooter.SetMode(
+                        "Account: signed in");
                 }
 
                 return;
             }
 
-            modeLabel.Text =
-            "Mode: anonymous";
+            statusFooter.SetMode(
+                "Mode: anonymous");
         }
 
         private void BeginRefreshCurrentUser()
