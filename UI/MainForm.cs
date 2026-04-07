@@ -18,8 +18,11 @@ namespace Reddit98Client
 
         private sealed class SearchSuggestionItem
         {
+            public string QueryText;
             public string FeedName;
             public string DisplayText;
+            public string Section;
+            public bool IsSubreddit;
 
             public override string ToString()
             {
@@ -47,8 +50,10 @@ namespace Reddit98Client
         private Button drawerCloseButton;
         private Panel topNavButtonsPanel;
         private Panel searchHostPanel;
-        private ComboBox searchComboBox;
+        private TextBox searchTextBox;
         private Button searchGoButton;
+        private Panel searchPopupPanel;
+        private Panel searchPopupResultsPanel;
         private Panel newPostPanel;
         private Button newPostButton;
         private FlowLayoutPanel feedPanel;
@@ -104,6 +109,7 @@ namespace Reddit98Client
         private bool uiBuilt = false;
         private bool updatingSearchItems = false;
         private bool subscriptionsLoading = false;
+        private bool searchLoading = false;
 
         private string lastFeedViewportKey = "";
         private string lastCommentViewportKey = "";
@@ -111,6 +117,9 @@ namespace Reddit98Client
         new List<FeedCategoryInfo>();
         private List<RedditSubreddit> subscribedSubreddits =
         new List<RedditSubreddit>();
+        private List<RedditPost> searchPosts =
+        new List<RedditPost>();
+        private int searchRequestId = 0;
 
         private static readonly string[] FallbackSubreddits =
         new string[]
@@ -257,38 +266,25 @@ namespace Reddit98Client
             searchHostPanel.Top =
             12;
 
-            searchComboBox =
-            new ComboBox();
+            searchTextBox =
+            new TextBox();
 
-            searchComboBox.Left =
+            searchTextBox.Left =
             4;
 
-            searchComboBox.Top =
+            searchTextBox.Top =
             3;
 
-            searchComboBox.Width =
+            searchTextBox.Width =
             260;
 
-            searchComboBox.DropDownStyle =
-            ComboBoxStyle.DropDown;
-
-            searchComboBox.IntegralHeight =
-            false;
-
-            searchComboBox.DropDownHeight =
-            180;
-
-            searchComboBox.TextUpdate +=
+            searchTextBox.TextChanged +=
             new EventHandler(
-                SearchComboBox_TextUpdate);
+                SearchTextBox_TextChanged);
 
-            searchComboBox.SelectionChangeCommitted +=
-            new EventHandler(
-                SearchComboBox_SelectionChangeCommitted);
-
-            searchComboBox.KeyDown +=
+            searchTextBox.KeyDown +=
             new KeyEventHandler(
-                SearchComboBox_KeyDown);
+                SearchTextBox_KeyDown);
 
             searchGoButton =
             new Button();
@@ -310,16 +306,43 @@ namespace Reddit98Client
                 SearchGoButton_Click);
 
             searchHostPanel.Controls.Add(
-                searchComboBox);
+                searchTextBox);
 
             searchHostPanel.Controls.Add(
                 searchGoButton);
+
+            searchPopupPanel =
+            new Panel();
+
+            searchPopupPanel.Visible =
+            false;
+
+            searchPopupPanel.BorderStyle =
+            BorderStyle.FixedSingle;
+
+            searchPopupPanel.Height =
+            240;
+
+            searchPopupResultsPanel =
+            new Panel();
+
+            searchPopupResultsPanel.Dock =
+            DockStyle.Fill;
+
+            searchPopupResultsPanel.AutoScroll =
+            true;
+
+            searchPopupPanel.Controls.Add(
+                searchPopupResultsPanel);
 
             topBarPanel.Controls.Add(
                 topNavButtonsPanel);
 
             topBarPanel.Controls.Add(
                 searchHostPanel);
+
+            topBarPanel.Controls.Add(
+                searchPopupPanel);
 
             statusFooter =
             new StatusFooterControl();
@@ -764,7 +787,7 @@ namespace Reddit98Client
             7;
 
             drawerHeaderLabel.Width =
-            150;
+            180;
 
             drawerCloseButton =
             new Button();
@@ -773,13 +796,16 @@ namespace Reddit98Client
             "<";
 
             drawerCloseButton.Width =
-            24;
+            18;
 
             drawerCloseButton.Height =
-            20;
+            60;
+
+            drawerCloseButton.Left =
+            0;
 
             drawerCloseButton.Top =
-            4;
+            10;
 
             drawerCloseButton.Click +=
             new EventHandler(
@@ -797,7 +823,7 @@ namespace Reddit98Client
             drawerHeaderPanel.Controls.Add(
                 drawerHeaderLabel);
 
-            drawerHeaderPanel.Controls.Add(
+            drawerPanel.Controls.Add(
                 drawerCloseButton);
 
             drawerPanel.Controls.Add(
@@ -888,11 +914,20 @@ namespace Reddit98Client
             searchHostPanel.Left =
             searchLeft;
 
-            searchComboBox.Width =
+            searchTextBox.Width =
             searchHostPanel.ClientSize.Width - 60;
 
             searchGoButton.Left =
-            searchComboBox.Right + 4;
+            searchTextBox.Right + 4;
+
+            searchPopupPanel.Width =
+            searchHostPanel.Width;
+
+            searchPopupPanel.Left =
+            searchHostPanel.Left;
+
+            searchPopupPanel.Top =
+            searchHostPanel.Bottom + 2;
 
             newPostButton.Left =
             (newPostPanel.ClientSize.Width -
@@ -921,9 +956,20 @@ namespace Reddit98Client
             feedHostPanel.ClientSize.Height;
 
             if (drawerCloseButton != null)
+            {
                 drawerCloseButton.Left =
                 drawerPanel.ClientSize.Width -
-                drawerCloseButton.Width - 4;
+                drawerCloseButton.Width;
+
+                drawerCloseButton.Top =
+                (drawerPanel.ClientSize.Height -
+                 drawerCloseButton.Height) / 2;
+
+                if (drawerCloseButton.Top < 8)
+                    drawerCloseButton.Top = 8;
+
+                drawerCloseButton.BringToFront();
+            }
 
             drawerOpenButton.Left =
             (drawerHandlePanel.ClientSize.Width -
@@ -988,28 +1034,21 @@ namespace Reddit98Client
                 MessageBoxIcon.Information);
         }
 
-        private void SearchComboBox_TextUpdate(
+        private void SearchTextBox_TextChanged(
             object sender,
             EventArgs e)
         {
             if (updatingSearchItems)
                 return;
 
+            BeginSearchSuggestions(
+                searchTextBox.Text);
+
             RefreshSearchSuggestions(
-                searchComboBox.Text);
-
-            if (searchComboBox.Items.Count > 0)
-                searchComboBox.DroppedDown = true;
+                searchTextBox.Text);
         }
 
-        private void SearchComboBox_SelectionChangeCommitted(
-            object sender,
-            EventArgs e)
-        {
-            ApplySelectedSearchSuggestion();
-        }
-
-        private void SearchComboBox_KeyDown(
+        private void SearchTextBox_KeyDown(
             object sender,
             KeyEventArgs e)
         {
@@ -1031,27 +1070,38 @@ namespace Reddit98Client
         private void ApplySelectedSearchSuggestion()
         {
             SearchSuggestionItem suggestion =
-            searchComboBox.SelectedItem
-            as SearchSuggestionItem;
+            null;
+
+            if (searchPopupResultsPanel != null &&
+                searchPopupResultsPanel.Controls.Count > 0)
+            {
+                int i;
+                for (i = 0;
+                     i < searchPopupResultsPanel.Controls.Count;
+                     i++)
+                {
+                    Button button =
+                    searchPopupResultsPanel.Controls[i]
+                    as Button;
+
+                    if (button != null)
+                    {
+                        suggestion =
+                        button.Tag as SearchSuggestionItem;
+                        break;
+                    }
+                }
+            }
 
             if (suggestion != null)
             {
-                SelectFeedCategory(
-                    suggestion.FeedName,
-                    true);
-
-                searchComboBox.Text =
-                suggestion.DisplayText;
-
-                SetDrawerOpen(false);
-                SetStatusText(
-                    "Opened " +
-                    suggestion.DisplayText);
+                ApplySearchSuggestion(
+                    suggestion);
                 return;
             }
 
             NavigateToSearchText(
-                searchComboBox.Text);
+                searchTextBox.Text);
         }
 
         private void NavigateToSearchText(
@@ -1068,44 +1118,137 @@ namespace Reddit98Client
                 "r/" + normalizedText,
                 true);
 
-            searchComboBox.Text =
+            searchTextBox.Text =
             "r/" + normalizedText;
 
+            HideSearchPopup();
             SetDrawerOpen(false);
             SetStatusText(
                 "Opened r/" +
                 normalizedText);
         }
 
+        private void ApplySearchSuggestion(
+            SearchSuggestionItem suggestion)
+        {
+            if (suggestion == null)
+                return;
+
+            if (suggestion.IsSubreddit)
+            {
+                SelectFeedCategory(
+                    suggestion.FeedName,
+                    true);
+
+                searchTextBox.Text =
+                suggestion.DisplayText;
+
+                HideSearchPopup();
+                SetDrawerOpen(false);
+                SetStatusText(
+                    "Opened " +
+                    suggestion.DisplayText);
+
+                return;
+            }
+
+            SelectFeedCategory(
+                suggestion.FeedName,
+                true);
+
+            searchTextBox.Text =
+            suggestion.QueryText;
+
+            HideSearchPopup();
+            SetStatusText(
+                "Search results for \"" +
+                suggestion.QueryText +
+                "\"");
+        }
+
+        private void BeginSearchSuggestions(
+            string query)
+        {
+            string normalizedQuery =
+            NormalizeSubredditQuery(query);
+
+            if (string.IsNullOrEmpty(normalizedQuery) ||
+                normalizedQuery.Length < 2)
+            {
+                searchLoading = false;
+                searchPosts.Clear();
+                HideSearchPopup();
+                return;
+            }
+
+            searchRequestId++;
+            int requestId =
+            searchRequestId;
+
+            searchLoading = true;
+
+            Thread t =
+            new Thread(delegate()
+            {
+                try
+                {
+                    RedditListingPage page =
+                    api.SearchPosts(
+                        normalizedQuery,
+                        null,
+                        5);
+
+                    UpdateUi(delegate()
+                    {
+                        if (requestId !=
+                            searchRequestId)
+                            return;
+
+                        searchPosts =
+                        page.Posts;
+
+                        searchLoading =
+                        false;
+
+                        RefreshSearchSuggestions(
+                            searchTextBox.Text);
+                    });
+                }
+                catch
+                {
+                    UpdateUi(delegate()
+                    {
+                        if (requestId !=
+                            searchRequestId)
+                            return;
+
+                        searchPosts.Clear();
+                        searchLoading = false;
+                        RefreshSearchSuggestions(
+                            searchTextBox.Text);
+                    });
+                }
+            });
+
+            t.IsBackground = true;
+            t.Start();
+        }
+
         private void RefreshSearchSuggestions(
             string query)
         {
-            if (searchComboBox == null)
+            if (searchTextBox == null ||
+                searchPopupResultsPanel == null ||
+                searchPopupPanel == null)
                 return;
 
             updatingSearchItems = true;
-
-            object selected =
-            searchComboBox.SelectedItem;
-
-            searchComboBox.Items.Clear();
-
             List<SearchSuggestionItem> suggestions =
             BuildSearchSuggestions(query);
 
-            int i;
-            for (i = 0;
-                 i < suggestions.Count;
-                 i++)
-            {
-                searchComboBox.Items.Add(
-                    suggestions[i]);
-            }
-
-            if (selected != null &&
-                searchComboBox.Items.Count > 0)
-                searchComboBox.SelectedIndex = 0;
-
+            RenderSearchPopup(
+                suggestions,
+                query);
             updatingSearchItems = false;
         }
 
@@ -1153,11 +1296,17 @@ namespace Reddit98Client
                 SearchSuggestionItem item =
                 new SearchSuggestionItem();
 
+                item.IsSubreddit =
+                true;
+
                 item.FeedName =
                 "r/" + subreddit.DisplayName;
 
                 item.DisplayText =
                 display;
+
+                item.Section =
+                "Communities";
 
                 result.Add(item);
 
@@ -1165,7 +1314,149 @@ namespace Reddit98Client
                     break;
             }
 
+            if (!string.IsNullOrEmpty(normalizedQuery) &&
+                normalizedQuery.Length >= 2)
+            {
+                int j;
+                for (j = 0;
+                     j < searchPosts.Count && j < 5;
+                     j++)
+                {
+                    SearchSuggestionItem item =
+                    new SearchSuggestionItem();
+
+                    item.IsSubreddit =
+                    false;
+
+                    item.QueryText =
+                    normalizedQuery;
+
+                    item.FeedName =
+                    "search:" + normalizedQuery;
+
+                    item.DisplayText =
+                    searchPosts[j].Title;
+
+                    item.Section =
+                    "Search results";
+
+                    result.Add(item);
+                }
+            }
+
             return result;
+        }
+
+        private void RenderSearchPopup(
+            List<SearchSuggestionItem> suggestions,
+            string query)
+        {
+            searchPopupResultsPanel.Controls.Clear();
+
+            if (suggestions == null ||
+                suggestions.Count == 0)
+            {
+                HideSearchPopup();
+                return;
+            }
+
+            int top = 6;
+            string currentSection = "";
+            int i;
+
+            for (i = 0;
+                 i < suggestions.Count;
+                 i++)
+            {
+                SearchSuggestionItem item =
+                suggestions[i];
+
+                if (!string.Equals(
+                        currentSection,
+                        item.Section,
+                        StringComparison.Ordinal))
+                {
+                    currentSection =
+                    item.Section;
+
+                    Label header =
+                    new Label();
+
+                    header.Left = 8;
+                    header.Top = top;
+                    header.Width = searchPopupResultsPanel.ClientSize.Width - 16;
+                    header.Height = 18;
+                    header.Text = currentSection;
+
+                    searchPopupResultsPanel.Controls.Add(
+                        header);
+
+                    top += 20;
+                }
+
+                Button button =
+                new Button();
+
+                button.Left = 8;
+                button.Top = top;
+                button.Width = searchPopupResultsPanel.ClientSize.Width - 24;
+                button.Height = 24;
+                button.Text = item.DisplayText;
+                button.Tag = item;
+                button.Click +=
+                new EventHandler(
+                    SearchSuggestionButton_Click);
+
+                searchPopupResultsPanel.Controls.Add(
+                    button);
+
+                top += 28;
+            }
+
+            if (searchLoading &&
+                !string.IsNullOrEmpty(
+                    NormalizeSubredditQuery(query)))
+            {
+                Label loading =
+                new Label();
+
+                loading.Left = 8;
+                loading.Top = top;
+                loading.Width = searchPopupResultsPanel.ClientSize.Width - 16;
+                loading.Height = 18;
+                loading.Text = "Searching...";
+
+                searchPopupResultsPanel.Controls.Add(
+                    loading);
+
+                top += 20;
+            }
+
+            searchPopupPanel.Visible = true;
+            searchPopupPanel.BringToFront();
+        }
+
+        private void SearchSuggestionButton_Click(
+            object sender,
+            EventArgs e)
+        {
+            Button button =
+            sender as Button;
+
+            if (button == null)
+                return;
+
+            SearchSuggestionItem suggestion =
+            button.Tag as SearchSuggestionItem;
+
+            ApplySearchSuggestion(
+                suggestion);
+        }
+
+        private void HideSearchPopup()
+        {
+            if (searchPopupPanel != null)
+                searchPopupPanel.Visible = false;
         }
 
         private static string NormalizeSubredditQuery(
@@ -1402,6 +1693,10 @@ namespace Reddit98Client
             }
 
             if (currentFeedName != null &&
+                currentFeedName.StartsWith("search:", StringComparison.OrdinalIgnoreCase))
+                return "Search";
+
+            if (currentFeedName != null &&
                 currentFeedName.StartsWith("r/", StringComparison.OrdinalIgnoreCase))
                 return currentFeedName;
 
@@ -1434,6 +1729,9 @@ namespace Reddit98Client
                 string.Equals(normalized, "top", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(normalized, "new", StringComparison.OrdinalIgnoreCase))
                 return "r/all";
+
+            if (normalized.StartsWith("search:", StringComparison.OrdinalIgnoreCase))
+                return normalized;
 
             if (normalized.StartsWith("r/", StringComparison.OrdinalIgnoreCase))
                 return normalized;
@@ -1568,8 +1866,8 @@ namespace Reddit98Client
                 UpdateAccountStatusLabel();
                 RefreshDrawerContents();
                 RefreshSearchSuggestions(
-                    searchComboBox != null
-                    ? searchComboBox.Text
+                    searchTextBox != null
+                    ? searchTextBox.Text
                     : "");
             });
         }
@@ -1635,8 +1933,8 @@ namespace Reddit98Client
             RefreshAccountMenuState();
             RefreshDrawerContents();
             RefreshSearchSuggestions(
-                searchComboBox != null
-                ? searchComboBox.Text
+                searchTextBox != null
+                ? searchTextBox.Text
                 : "");
 
             SetStatusText(
@@ -1772,8 +2070,8 @@ namespace Reddit98Client
                 subscriptionsLoading = false;
                 RefreshDrawerContents();
                 RefreshSearchSuggestions(
-                    searchComboBox != null
-                    ? searchComboBox.Text
+                    searchTextBox != null
+                    ? searchTextBox.Text
                     : "");
                 return;
             }
@@ -1785,7 +2083,7 @@ namespace Reddit98Client
             RefreshDrawerContents();
 
             Thread t =
-            new Thread(delegate()
+            new Thread(new ThreadStart(delegate()
             {
                 try
                 {
@@ -1802,8 +2100,8 @@ namespace Reddit98Client
 
                         RefreshDrawerContents();
                         RefreshSearchSuggestions(
-                            searchComboBox != null
-                            ? searchComboBox.Text
+                            searchTextBox != null
+                            ? searchTextBox.Text
                             : "");
 
                         SetStatusText(
@@ -1822,15 +2120,15 @@ namespace Reddit98Client
                         subscribedSubreddits.Clear();
                         RefreshDrawerContents();
                         RefreshSearchSuggestions(
-                            searchComboBox != null
-                            ? searchComboBox.Text
+                            searchTextBox != null
+                            ? searchTextBox.Text
                             : "");
 
                         SetStatusText(
                             ex.Message);
                     });
                 }
-            });
+            }));
 
             t.IsBackground = true;
             t.Start();

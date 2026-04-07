@@ -91,6 +91,17 @@ namespace Reddit98Client
             if (string.IsNullOrEmpty(feedName))
                 feedName = AppConfig.DefaultFeed;
 
+            if (feedName.StartsWith("search:", StringComparison.OrdinalIgnoreCase))
+            {
+                string query =
+                feedName.Substring(7);
+
+                return SearchPosts(
+                    query,
+                    after,
+                    limit);
+            }
+
             string path = "/" + EncodeFeedName(feedName) + ".json?raw_json=1&limit=" + limit.ToString(CultureInfo.InvariantCulture);
             if (!string.IsNullOrEmpty(after))
                 path += "&after=" + Uri.EscapeDataString(after);
@@ -216,6 +227,77 @@ namespace Reddit98Client
             }
 
             return comments;
+        }
+
+        public RedditListingPage SearchPosts(string query, string after, int limit)
+        {
+            EnsureValidToken();
+
+            if (string.IsNullOrEmpty(query))
+                throw new InvalidOperationException("Search query is empty.");
+
+            if (limit <= 0)
+                limit = 10;
+
+            string path =
+            "/search.json?raw_json=1&limit=" +
+            limit.ToString(CultureInfo.InvariantCulture) +
+            "&q=" +
+            Uri.EscapeDataString(query);
+
+            if (!string.IsNullOrEmpty(after))
+                path += "&after=" + Uri.EscapeDataString(after);
+
+            string url =
+            BuildApiUrl(path);
+
+            string json =
+            RequestJson("GET", url, null, null, false);
+
+            object root =
+            JsonParser.Parse(json);
+
+            Hashtable obj =
+            JsonParser.AsObject(root);
+
+            if (obj == null)
+                throw new InvalidOperationException("Invalid search response.");
+
+            Hashtable data =
+            JsonParser.GetObject(obj, "data");
+
+            if (data == null)
+                throw new InvalidOperationException("Invalid search response.");
+
+            RedditListingPage page =
+            new RedditListingPage();
+
+            page.After =
+            JsonParser.GetString(data, "after");
+
+            page.Before =
+            JsonParser.GetString(data, "before");
+
+            ArrayList children =
+            JsonParser.GetArray(data, "children");
+
+            if (children != null)
+            {
+                int i;
+                for (i = 0;
+                     i < children.Count;
+                     i++)
+                {
+                    RedditPost post =
+                    ParsePost(
+                        JsonParser.AsObject(children[i]));
+
+                    if (post != null)
+                        page.Posts.Add(post);
+                }
+            }
+
+            return page;
         }
 
         public byte[] DownloadBytes(string url)
