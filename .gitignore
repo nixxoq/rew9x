@@ -1,6 +1,8 @@
 .*
 !.gitignore
+build/
 Reddit98Client.exe
 account.json
 *.tmp
 *.swp
+*~
