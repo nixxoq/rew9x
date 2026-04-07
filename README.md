@@ -1,6 +1,6 @@
-# [WIP] ReW9x (Reddit for Windows 9x)
+# [WIP] ReW9x (Reddit98Client)
 
-ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping basic Reddit reading usable on a Windows 9x-era systems.
+ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping basic Reddit reading usable on Windows 9x-era machines.
 
 > [!CAUTION]
 > This project already has a usable reader flow, but it is still rough software.
@@ -13,8 +13,9 @@ ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping
 ![comments](assets/comments.png)
 
 ## Disclaimer
-> This is an unofficial third-party Reddit client.
 
+> This is an unofficial third-party Reddit client.
+>
 > Reddit's API policies, rate limits, and platform rules may change over time.
 > Use this client at your own risk. The author and contributors are not
 > responsible for Reddit account issues, API access changes, or service-side
@@ -46,31 +47,57 @@ ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping
 - Search UX still needs more polish
 - Search popup behavior is functional but still evolving
 - Topic drawer sizing/layout is still being tuned
-- Some shell interactions may feel approximate compared to modern Reddit
-- UI layout can still behave badly in edge cases or after unusual resize paths
-- The current shell is usable, but not yet “finished”
+- Some shell interactions are approximations of modern Reddit behavior
+- UI layout can still behave badly in resize/edge cases
 
 ### Planned / TODO
 - Better search UX and result presentation
 - More shell/layout polish
-- Better subreddit/topic navigation (implementing keybindings)
-- Ability to create a new posts from this Client
-- Parse embed content from news?
+- Better subreddit/topic navigation
+- A real posting flow beyond the current stub
+- Parsing embed content from post/news
 
-## Building (Linux only)
+## Building (Linux)
+
+### Build Prerequisite: `native_tls.dll`
+
+Before building the main client, you must have a working toolchain that can
+build the native TLS bridge DLL.
+
+The wrapper DLL depends on:
+
+- a working MinGW toolchain suitable for old Windows targets
+- a working OpenSSL build
+
+If your normal MinGW toolchain does not produce a usable DLL for Win9x-era
+targets, read the wrapper-specific notes here:
+
+- [`external/openssl_wrp/README.md`](external/openssl_wrp/README.md)
+
+The toolchain used for this project was built from the Discord Messenger guide:
+
+- https://github.com/DiscordMessenger/dm/tree/master/doc/pentium-toolchain
+
+`build.sh` already tries to build `native_tls.dll` automatically, but this only
+works if that toolchain and OpenSSL build are already set up correctly.
+
 Build the client with:
 
 ```bash
 bash build.sh
 ```
 
-The build script compiles the executable to:
+The build script:
+
+- builds `build/native_tls.dll`
+- builds `build/ReW9x.exe`
+- copies the required runtime files into `build/`
+
+The final executable is:
 
 ```text
 build/ReW9x.exe
 ```
-
-It also copies the required runtime files into `build/`.
 
 ## Running
 
@@ -86,7 +113,9 @@ WINEPREFIX=... wine build/ReW9x.exe
 - `src/models/` - domain models
 - `src/ui/` - WinForms UI
 - `src/utils/` - parser/storage/shared helpers
-- `external/openssl_wrp/` - Custom OpenSSL wrapper
+- `external/openssl_wrp/` - OpenSSL wrapper sources
+- `external/openssl_wrp/runtime/` - runtime DLLs and CA bundle copied into `build/`
+- `build/` - generated executable and runtime assets
 
 ## OAuth Setup
 
@@ -132,7 +161,7 @@ The final `build/` directory is expected to contain:
 - `providers/legacy.dll`
 - `cacert.pem`
 
-These are copied from:
+These are sourced from:
 
 ```text
 external/openssl_wrp/runtime/
@@ -145,5 +174,4 @@ external/openssl_wrp/runtime/
 
 - OpenSSL build/source used for this project:
   https://github.com/DiscordMessenger/openssl
-- The native TLS wrapper/runtime is expected from:
-  `external/openssl_wrp/runtime/`
+  
