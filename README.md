@@ -6,6 +6,12 @@ ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping
 > This project already has a usable reader flow, but it is still rough software.
 > Expect UI quirks, unfinished flows, and layout bugs that need more polishing.
 
+## Screenshot
+
+![ReW9x full preview](assets/full_prev.png)
+![rew9x](assets/prev1.png)
+![comments](assets/comments.png)
+
 ## Disclaimer
 > This is an unofficial third-party Reddit client.
 
@@ -49,6 +55,7 @@ ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping
 - More shell/layout polish
 - Better subreddit/topic navigation (implementing keybindings)
 - Ability to create a new posts from this Client
+- Parse embed content from news?
 
 ## Building (Linux only)
 Build the client with:
