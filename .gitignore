@@ -1,0 +1,6 @@
+.*
+!.gitignore
+Reddit98Client.exe
+account.json
+*.tmp
+*.swp
