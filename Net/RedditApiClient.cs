@@ -300,6 +300,68 @@ namespace Reddit98Client
             return page;
         }
 
+        public List<RedditSubreddit> SearchSubreddits(string query, int limit)
+        {
+            EnsureValidToken();
+
+            List<RedditSubreddit> result =
+            new List<RedditSubreddit>();
+
+            if (string.IsNullOrEmpty(query))
+                return result;
+
+            if (limit <= 0)
+                limit = 10;
+
+            string path =
+            "/subreddits/search.json?raw_json=1&limit=" +
+            limit.ToString(CultureInfo.InvariantCulture) +
+            "&q=" +
+            Uri.EscapeDataString(query);
+
+            string url =
+            BuildApiUrl(path);
+
+            string json =
+            RequestJson("GET", url, null, null, false);
+
+            object root =
+            JsonParser.Parse(json);
+
+            Hashtable obj =
+            JsonParser.AsObject(root);
+
+            if (obj == null)
+                return result;
+
+            Hashtable data =
+            JsonParser.GetObject(obj, "data");
+
+            if (data == null)
+                return result;
+
+            ArrayList children =
+            JsonParser.GetArray(data, "children");
+
+            if (children == null)
+                return result;
+
+            int i;
+            for (i = 0;
+                 i < children.Count;
+                 i++)
+            {
+                RedditSubreddit subreddit =
+                ParseSubreddit(
+                    JsonParser.AsObject(children[i]));
+
+                if (subreddit != null)
+                    result.Add(subreddit);
+            }
+
+            return result;
+        }
+
         public byte[] DownloadBytes(string url)
         {
             if (string.IsNullOrEmpty(url))
