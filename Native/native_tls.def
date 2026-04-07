@@ -1,0 +1,6 @@
+LIBRARY native_tls
+EXPORTS
+    tls_global_init
+    tls_global_cleanup
+    tls_free
+    https_request
