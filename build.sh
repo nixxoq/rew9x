@@ -3,9 +3,17 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 OPENSSL_DIR="${OPENSSL_DIR:-$HOME/openssl}"
-MINGW_CC="${MINGW_CC:-i686-w64-mingw32-gcc}"
 
 mkdir -p build/providers
+
+if [ -z "${MINGW_CC:-}" ]; then
+  echo "MINGW_CC is not set." >&2
+  echo "Set it explicitly to the exact compiler from your Win9x-compatible toolchain." >&2
+  echo "Example:" >&2
+  echo "export PATH=/path/to/custom/mingw/build/cross/bin:$PATH" >&2
+  echo "MINGW_CC=i686-w64-mingw32-gcc OPENSSL_DIR=/path/to/openssl bash build.sh" >&2
+  exit 1
+fi
 
 if [ ! -d "$OPENSSL_DIR/include" ]; then
   echo "OpenSSL include directory not found: $OPENSSL_DIR/include" >&2
@@ -20,6 +28,11 @@ fi
 "$MINGW_CC" \
   -shared \
   -O2 \
+  -march=i386 \
+  -mtune=i386 \
+  -mno-mmx \
+  -mno-sse \
+  -mno-sse2 \
   -Iexternal/openssl_wrp \
   -I"$OPENSSL_DIR/include" \
   -L"$OPENSSL_DIR" \

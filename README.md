@@ -78,13 +78,29 @@ The toolchain used for this project was built from the Discord Messenger guide:
 
 - https://github.com/DiscordMessenger/dm/tree/master/doc/pentium-toolchain
 
+You should also set `MINGW_CC` manually to the exact compiler from that
+toolchain.
+
+Do not rely on a random `i686-w64-mingw32-gcc` from your system PATH if you are
+targeting old Windows builds. Using the wrong compiler can produce a
+`native_tls.dll` that builds successfully but crashes or misbehaves on older
+systems.
+
+For example:
+
+```bash
+export PATH="$HOME/mingw-builds/install/cross/bin:$PATH"
+MINGW_CC=i686-w64-mingw32-gcc OPENSSL_DIR=$HOME/src/openssl bash build.sh
+```
+
 `build.sh` already tries to build `native_tls.dll` automatically, but this only
-works if that toolchain and OpenSSL build are already set up correctly.
+works if that toolchain, the explicit `MINGW_CC`, and the OpenSSL build are all
+set up correctly.
 
 Build the client with:
 
 ```bash
-bash build.sh
+MINGW_CC=i686-w64-mingw32-gcc OPENSSL_DIR=$HOME/src/openssl bash build.sh
 ```
 
 The build script:
