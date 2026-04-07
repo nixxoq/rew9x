@@ -38,6 +38,7 @@ namespace Reddit98Client
         private SplitContainer split;
         private Panel topBarPanel;
         private Panel feedHostPanel;
+        private Panel drawerHandlePanel;
         private Panel drawerPanel;
         private Panel drawerHeaderPanel;
         private Label drawerHeaderLabel;
@@ -383,38 +384,50 @@ namespace Reddit98Client
             feedHostPanel.Dock =
             DockStyle.Fill;
 
-            feedHostPanel.Resize +=
-            new EventHandler(
-                FeedHostPanel_Resize);
+            drawerHandlePanel =
+            new Panel();
+
+            drawerHandlePanel.Dock =
+            DockStyle.Left;
+
+            drawerHandlePanel.Width =
+            18;
+
+            drawerHandlePanel.BorderStyle =
+            BorderStyle.FixedSingle;
 
             drawerPanel =
             new Panel();
+            drawerPanel.Dock =
+            DockStyle.Left;
             drawerPanel.Width =
             220;
-
             drawerPanel.Visible =
             false;
-
             drawerPanel.BorderStyle =
             BorderStyle.FixedSingle;
-
             BuildDrawerPanel();
 
             drawerOpenButton =
             new Button();
-
             drawerOpenButton.Text =
             ">";
-
             drawerOpenButton.Width =
-            18;
-
+            16;
             drawerOpenButton.Height =
             60;
-
+            drawerOpenButton.Left = 0;
+            drawerOpenButton.Top = 10;
             drawerOpenButton.Click +=
             new EventHandler(
                 DrawerOpenButton_Click);
+
+            drawerHandlePanel.Resize +=
+            new EventHandler(
+                DrawerHandlePanel_Resize);
+
+            drawerHandlePanel.Controls.Add(
+                drawerOpenButton);
 
             feedPanel =
             new FlowLayoutPanel();
@@ -446,7 +459,7 @@ namespace Reddit98Client
                 drawerPanel);
 
             feedHostPanel.Controls.Add(
-                drawerOpenButton);
+                drawerHandlePanel);
 
             split.Panel1.Controls.Add(
                 feedHostPanel);
@@ -889,7 +902,7 @@ namespace Reddit98Client
                 newPostButton.Left = 8;
         }
 
-        private void FeedHostPanel_Resize(
+        private void DrawerHandlePanel_Resize(
             object sender,
             EventArgs e)
         {
@@ -900,11 +913,10 @@ namespace Reddit98Client
         {
             if (feedHostPanel == null ||
                 drawerPanel == null ||
-                drawerOpenButton == null)
+                drawerOpenButton == null ||
+                drawerHandlePanel == null)
                 return;
 
-            drawerPanel.Left = 0;
-            drawerPanel.Top = 0;
             drawerPanel.Height =
             feedHostPanel.ClientSize.Height;
 
@@ -913,9 +925,15 @@ namespace Reddit98Client
                 drawerPanel.ClientSize.Width -
                 drawerCloseButton.Width - 4;
 
-            drawerOpenButton.Left = 0;
+            drawerOpenButton.Left =
+            (drawerHandlePanel.ClientSize.Width -
+             drawerOpenButton.Width) / 2;
+
+            if (drawerOpenButton.Left < 0)
+                drawerOpenButton.Left = 0;
+
             drawerOpenButton.Top =
-            (feedHostPanel.ClientSize.Height -
+            (drawerHandlePanel.ClientSize.Height -
              drawerOpenButton.Height) / 2;
 
             if (drawerOpenButton.Top < 8)
