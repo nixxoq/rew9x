@@ -42,20 +42,25 @@ ReW9x is a lightweight Reddit client for old Windows systems, focused on keeping
 - Inline image preview for supported image posts
 - Separate image viewer window for larger image viewing
 
-### Partially Implemented / Rough Edges
-- Reddit OAuth login via manual authorization-code flow
+### Partially Implemented
 - Search UX still needs more polish
 - Search popup behavior is functional but still evolving
 - Topic drawer sizing/layout is still being tuned
 - Some shell interactions are approximations of modern Reddit behavior
 - UI layout can still behave badly in resize/edge cases
+- Markdown support (links only)
+
+### In Progress
+- Login using browser cookies
+- Parsing embed content from post/news
+- Full Markdown support
 
 ### Planned / TODO
 - Better search UX and result presentation
 - More shell/layout polish
 - Better subreddit/topic navigation
 - A real posting flow beyond the current stub
-- Parsing embed content from post/news
+- Reddit OAuth login via manual authorization-code flow
 
 ## Building (Linux)
 
