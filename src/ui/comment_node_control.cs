@@ -18,7 +18,7 @@ namespace ReW9x.UI
         private const int InnerPadding = 4;
 
         private Label authorLabel;
-        private Label bodyLabel;
+        private LinkLabel bodyLabel;
         private int displayDepth;
 
         public CommentNodeControl(
@@ -62,13 +62,27 @@ namespace ReW9x.UI
             false;
 
             bodyLabel =
-            new Label();
+            new LinkLabel();
 
-            bodyLabel.Text =
-            HtmlUtil.DecodeBasic(c.Body);
+            MarkdownLinkLabelHelper.Apply(
+                bodyLabel,
+                c.Body);
 
             bodyLabel.AutoSize =
             false;
+
+            bodyLabel.BackColor =
+            Color.White;
+
+            bodyLabel.LinkBehavior =
+            LinkBehavior.HoverUnderline;
+
+            bodyLabel.UseMnemonic =
+            false;
+
+            bodyLabel.LinkClicked +=
+            new LinkLabelLinkClickedEventHandler(
+                BodyLinkClicked);
 
             Controls.Add(bodyLabel);
             Controls.Add(authorLabel);
@@ -245,6 +259,19 @@ namespace ReW9x.UI
                 return "[deleted]";
 
             return author;
+        }
+
+        private void BodyLinkClicked(
+            object sender,
+            LinkLabelLinkClickedEventArgs e)
+        {
+            if (e.Link == null ||
+                e.Link.LinkData == null)
+                return;
+
+            LinkNavigationHelper.Open(
+                this,
+                e.Link.LinkData.ToString());
         }
 
     }

@@ -68,7 +68,8 @@ namespace ReW9x.UI
 
         private Label postTitleLabel;
         private Label postMetaLabel;
-        private TextBox postBodyBox;
+        private Panel postBodyPanel;
+        private LinkLabel postBodyLabel;
         private Panel postMediaPanel;
         private Panel postMediaScrollPanel;
         private PictureBox postImageBox;
@@ -207,7 +208,7 @@ namespace ReW9x.UI
                 Path.Combine(
                     Application.StartupPath,
                     "cacert.pem"),
-                false);
+                AppConfig.VerifyTlsPeer);
 
             Shown +=
             new EventHandler(
@@ -625,27 +626,52 @@ namespace ReW9x.UI
             postMediaPanel.Controls.Add(
                 postMediaScrollPanel);
 
-            postBodyBox =
-            new TextBox();
+            postBodyPanel =
+            new Panel();
 
-            postBodyBox.Dock =
+            postBodyPanel.Dock =
             DockStyle.Fill;
 
-            postBodyBox.Multiline =
+            postBodyPanel.AutoScroll =
             true;
 
-            postBodyBox.ScrollBars =
-            ScrollBars.Vertical;
+            postBodyPanel.BackColor =
+            Color.White;
 
-            postBodyBox.ReadOnly =
-            true;
+            postBodyLabel =
+            new LinkLabel();
+
+            postBodyLabel.AutoSize =
+            false;
+
+            postBodyLabel.Left =
+            6;
+
+            postBodyLabel.Top =
+            6;
+
+            postBodyLabel.BackColor =
+            Color.White;
+
+            postBodyLabel.LinkBehavior =
+            LinkBehavior.HoverUnderline;
+
+            postBodyLabel.UseMnemonic =
+            false;
+
+            postBodyLabel.LinkClicked +=
+            new LinkLabelLinkClickedEventHandler(
+                BodyLinkClicked);
+
+            postBodyPanel.Controls.Add(
+                postBodyLabel);
 
             postTab.Resize +=
             new EventHandler(
                 PostTab_Resize);
 
             postTab.Controls.Add(
-                postBodyBox);
+                postBodyPanel);
 
             postTab.Controls.Add(
                 postMediaPanel);

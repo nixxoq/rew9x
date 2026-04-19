@@ -164,8 +164,8 @@ namespace ReW9x.UI
                 post.Url;
             }
 
-            postBodyBox.Text =
-            currentPostFallbackText;
+            SetPostBodyText(
+                currentPostFallbackText);
 
             UpdatePostLayoutMetrics();
             StartPostMediaLoad(post);
@@ -764,6 +764,19 @@ namespace ReW9x.UI
             UpdatePostLayoutMetrics();
         }
 
+        private void BodyLinkClicked(
+            object sender,
+            LinkLabelLinkClickedEventArgs e)
+        {
+            if (e.Link == null ||
+                e.Link.LinkData == null)
+                return;
+
+            LinkNavigationHelper.Open(
+                this,
+                e.Link.LinkData.ToString());
+        }
+
         private void PostMediaScrollPanel_Resize(
             object sender,
             EventArgs e)
@@ -808,22 +821,65 @@ namespace ReW9x.UI
             if (!uiBuilt)
                 return;
 
-            if (postBodyBox == null)
+            if (postBodyPanel == null ||
+                postBodyLabel == null)
                 return;
 
             if (currentPost != null &&
                 !currentPost.IsSelf &&
                 currentPostPreviewLoaded)
             {
-                postBodyBox.Visible =
+                postBodyPanel.Visible =
                 false;
-                postBodyBox.Text = "";
+                SetPostBodyText("");
                 return;
             }
 
-            postBodyBox.Visible = true;
-            postBodyBox.Text =
-            currentPostFallbackText;
+            postBodyPanel.Visible = true;
+            SetPostBodyText(
+                currentPostFallbackText);
+            UpdatePostBodyLabelLayout();
+        }
+
+        private void SetPostBodyText(
+            string text)
+        {
+            if (postBodyLabel == null)
+                return;
+
+            MarkdownLinkLabelHelper.Apply(
+                postBodyLabel,
+                text);
+        }
+
+        private void UpdatePostBodyLabelLayout()
+        {
+            if (postBodyPanel == null ||
+                postBodyLabel == null)
+                return;
+
+            int width =
+            postBodyPanel.ClientSize.Width -
+            SystemInformation.VerticalScrollBarWidth -
+            12;
+
+            if (width < 80)
+                width = 80;
+
+            postBodyLabel.Left =
+            6;
+
+            postBodyLabel.Top =
+            6;
+
+            postBodyLabel.Width =
+            width;
+
+            postBodyLabel.Height =
+            TextLayoutHelper.MeasureTextHeight(
+                postBodyLabel.Text,
+                postBodyLabel.Font,
+                width) + 8;
         }
 
         private void UpdatePostImageLayout()
@@ -900,7 +956,7 @@ namespace ReW9x.UI
             postMetaLabel.Height -
             12;
 
-            if (postBodyBox.Visible)
+            if (postBodyPanel.Visible)
                 available -= 120;
 
             if (available < 120)
